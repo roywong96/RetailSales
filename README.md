@@ -31,3 +31,20 @@ Using the EACF a the BIC table, we selected a few models as listed below:
 - SARIMA(2,1,4)X(1,1,1)<sub>12</sub>
 - SARIMA(3,1,4)X(1,1,1)<sub>12</sub>
 
+
+# Model Diagnostics
+
+- We carry out the Residual Analysis to determine whether the model selected is suitable for forcasting
+- SARIMA(1,1,2)X(1,1,1)<sub>12</sub> is proven to be normal so we can proceed with the forecasting.
+
+
+# Forecasting
+
+The prediction of the next 10 units is shown. Clearly, it reflects on the seasonality. We notice that the forecast’s limits become bigger as long as the prediction is made for longer durations. That is because the uncertainty level in the forecast will increase due to the seasonality, the ordinal, and autocorrelation characteristics. In Figure 42, we can see that the next 10 units of sales of recreational goods will fluctuate in the blue region (80% confidence interval) and the grey region (95% confidence interval).
+
+# Conclusion
+
+Firstly, the recreational goods sales series is not normal and nonstationary. As a result, we applied Box-Cox transformation to improve the stability of variance. Also, after the first seasonal and ordinary differencing, it turns out to be stationary.
+
+From the set of selected models, model fitting is carried out to determine the most competative model which is SARIMA(1,1,2)X(1,1,1)<sub>12</sub> model. Through model diagnostics, it can be proved that SARIMA(1,1,2)X(1,1,1)<sub>12</sub> is a reliable and promising model to predict as shown above.
+
