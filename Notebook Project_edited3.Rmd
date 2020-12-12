@@ -1,0 +1,663 @@
+---
+title: "Retail Sales for Recreational Goods"
+subtitle: "MATH1318 Time-Series Analysis Final Project"
+author: 'Puja (S3795543), Roy Wong Kher Yung (S3835352), Yenting Liu (S3750625)'
+date: "6/6/2020"
+output:
+  html_document: 
+    toc: true
+    number_sections: true
+  word_document:
+    toc: true
+    number_sections: true
+  pdf_document: 
+    toc: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+
+
+
+```{r, echo = FALSE, warnings = FALSE, message=FALSE}
+library(TSA)
+library(tseries)
+library(forecast)
+library(FitAR)
+library(lmtest)
+library(fUnitRoots)
+library(readr)
+
+
+#*Box Cox Search Function
+
+BoxCoxSearch = function(y, lambda=seq(-3,3,0.01), 
+                        m= c("sf", "sw","ad" ,"cvm", "pt", "lt", "jb"), plotit = T, verbose = T){
+  N = length(m)
+  BC.y = array(NA,N)
+  BC.lam = array(NA,N)
+  for (i in 1:N){
+    if (m[i] == "sf"){
+      wrt = "Shapiro-Francia Test"
+    } else if (m[i] == "sw"){
+      wrt = "Shapiro-Wilk  Test"
+    } else if (m[i] == "ad"){
+      wrt = "Anderson-Darling Test"
+    } else if (m[i] == "cvm"){
+      wrt = "Cramer-von Mises Test"
+    } else if (m[i] == "pt"){
+      wrt = "Pearson Chi-square Test"
+    } else if (m[i] == "lt"){
+      wrt = "Lilliefors Test"
+    } else if (m[i] == "jb"){
+      wrt = "Jarque-Bera Test"
+    } 
+    
+    print(paste0("------------- ",wrt," -------------"))
+    out = tryCatch({boxcoxnc(y, method = m[i], lam = lambda, lambda2 = NULL, plot = plotit, alpha = 0.05, verbose = verbose)
+      BC.lam[i] = as.numeric(out$lambda.hat)}, 
+      error = function(e) print("No results for this test!"))
+    
+  }
+  return(list(lambda = BC.lam,p.value = BC.y))
+}
+
+
+# Residual Analysis Function
+
+residual.analysis <- function(model, std = TRUE,start = 2, class = c("ARIMA","GARCH","ARMA-GARCH")[1]){
+  # If you have an output from arima() function use class = "ARIMA"
+  # If you have an output from garch() function use class = "GARCH"
+  # If you have an output from ugarchfit() function use class = "ARMA-GARCH"
+  
+  if (class == "ARIMA"){
+    if (std == TRUE){
+      res.model = rstandard(model)
+    }else{
+      res.model = residuals(model)
+    }
+  }else if (class == "GARCH"){
+    res.model = model$residuals[start:model$n.used]
+  }else if (class == "ARMA-GARCH"){
+    res.model = model@fit$residuals
+  }else {
+    stop("The argument 'class' must be either 'ARIMA' or 'GARCH' ")
+  }
+  par(mfrow=c(3,2))
+  plot(res.model,type='o',ylab='Standardised residuals', main="Time series plot of standardised residuals")
+  abline(h=0)
+  hist(res.model,main="Histogram of standardised residuals")
+  acf(res.model,main="ACF of standardised residuals")
+  pacf(res.model,main="PACF of standardised residuals")
+  qqnorm(res.model,main="QQ plot of standardised residuals")
+  qqline(res.model, col = 2)
+  print(shapiro.test(res.model))
+  k=0
+  #Ljung Box independence test for every lag H0:independent, H1: series is correlated at lags
+  LBQPlot(res.model, lag.max =  length(model$residuals)-1, StartLag = k + 1, k = 0, SquaredQ = FALSE)
+}
+
+# Sort AIC and BIC Values Function
+sort.score <- function(x, score = c("bic", "aic")){
+  if (score == "aic"){
+    x[with(x, order(AIC)),]
+  } else if (score == "bic") {
+    x[with(x, order(BIC)),]
+  } else {
+    warning('score = "x" only accepts valid arguments ("aic","bic")')
+  }
+}
+
+```
+
+# Introduction
+
+In this report, we will conduct the Model-Building Strategy to find the best fitting model for the data of monthly retail sales in millions of dollars for recreational goods in New Zealand from 1995 to 2010. After this, the forecast for monthly retail sales for recreational goods in New Zealand for the next 10 units of time will be given at the end of the report.
+
+
+## Target Feature
+
+This series gives the monthly retail sales in millions of dollars for four categories of goods in New Zealand from 1995 to 2010. (There are many more categories available at infoshare). And we have selected one of the variable, `Rec_goods` as our target feature.
+
+* Rec_goods is recreational goods, and includes sport and camping equipment, toys and games, books and stationery, photographic equipment and marine equipment.
+
+## Preparing Data
+
+```{r,echo=F}
+ret<- read_csv("RetailNZTS4.csv")
+retail = ret[,c("Time","Rec_goods")]
+knitr::kable(head(retail))
+retail.ts = ts(retail$Rec_goods,start=c(1995,5),end=c(2010,9),frequency = 12)
+```
+
+
+## Data Visualization
+
+### Time Series Plot
+
+By observing Figure.1 as below, we can say this time series has a little upwards trend (Increasing mean), a bit of changing variation and seasonality.
+
+```{r,echo = F}
+plot(retail.ts, 
+     type='o', 
+     ylab='Sales', 
+     xlab='Years', 
+     main='Figure.1: Time series plot of Retail Sales of Recreational Goods')
+```
+<br/><br/>
+
+### Scatter Plot
+The scatter plot indicatess that there is a high positive correlation between the retail sales of previous year and current year. 
+
+```{r,echo = F}
+plot(y=retail.ts, x=zlag(retail.ts), ylab='Previous year of retail sales', xlab='Current year of retail sales',main="Figure.2: Scatter plot between the retail sales \n of previous year and current year.")
+```
+
+<br/><br/>
+
+## Check Seasonality
+
+There is a slow decaying pattern in the ACF and very high correlation on the first lag in the PACF implies the existence of a trend and non-stationarity. 
+
+```{r,echo = F}
+par(mar=c(5,4,4.5,1),mfrow=c(1,2), cex.main=1, cex.lab=1, cex.axis=1) 
+#c(bottom, left, top, right)
+acf(retail.ts, lag.max = 60,main="Figure.3: ACF plot of Retail Sales of \n Recreational Goods")
+pacf(retail.ts, lag.max = 60,main="Figure.4: PACF plot of Retail Sales of \n Recreational Goods")
+```
+
+
+## Check Stationarity
+
+ADF Test Assumtions:
+
+* $H_0$: The given series is non-stationary
+* $H_A$: Stationary
+
+```{r,echo = F}
+order=ar(diff(retail.ts))$order
+adfTest(retail.ts, lags = order)
+```
+
+Furthermore, with the p-value from the ADF-test of 0.9884, clearly it is greater than 0.05. this indicates the it is not significant enough to reject the null hypothesis. Hence, this implies that the series is non-stationary.
+
+<br/><br/>
+
+## Normality Test
+
+From the results, the Q-Q plot reveals that it did not meet the requirements of normality. It is further confirmed by the p-value = 5.065e-10, which is less than 0.05. Hence, this implies that the null hypothesis is rejected showing that the data is not normal.
+ 
+```{r,echo = F}
+qqnorm(retail.ts,main ="Figure.5: Q-Q plot of Retail Sales of Recreational Goods")
+qqline(retail.ts, col=2, lty=2, lw=2)
+shapiro.test(retail.ts)
+```
+ 
+<br/><br/>
+
+# Model Specification
+
+## Check Stationarity & Seasonality
+
+According to Figure 3 & 4, there is the presence of seasonality and non-stationarity as we can see some significant correlations at lag1, lag2 in ACF & PACF. So, in order to get rid of these characteristics, we apply seasonal lag.
+
+
+## Seasonality Lag
+
+```{r,echo = F}
+m1.retail_ts = arima(retail.ts,order=c(0,0,0),seasonal=list(order=c(0,1,0), period=12))
+m1_residual = residuals(m1.retail_ts);  
+```
+
+```{r,echo=F}
+par(mfrow=c(1,1))
+plot(m1_residual,xlab='Time',ylab='Residuals',main="Figure.6: Time series plot of the residuals")
+
+```
+
+```{r,echo=F}
+par(mar=c(5,4,4.5,1),mfrow=c(1,2), cex.main=1, cex.lab=1, cex.axis=1) 
+#c(bottom, left, top, right)
+acf(m1_residual, lag.max = 60, main = "Figure.7: The sample ACF of \n the residuals")
+pacf(m1_residual, lag.max = 60, main = "Figure.8: The sample PACF of \n the residuals")
+
+```
+
+We will add the SARMA(1,1,1) component and see if we get rid of seasonal component.
+
+
+## Fitting in SARMA(1,1,1)
+
+We observe a significant correlation at lag1 in ACF, a significant correration at lag1 and a slightly significant correlation at lag2 in PACF .This is due to the changing point and existing trend. We can move forward with ordinary differencing to get rid of the ordinary part.
+
+```{r,warning=FALSE}
+
+m2.retail_ts = arima(retail.ts,order=c(0,0,0),seasonal=list(order=c(1,1,1), period=12))
+m2_residual = residuals(m2.retail_ts)
+```
+
+```{r,echo=F}
+plot(m2_residual, xlab='Time',ylab='Residuals',main="Figure.9: Time series plot of the residuals")
+
+par(mar=c(5,4,4.5,1),mfrow=c(1,2),cex.main=1, cex.lab=1, cex.axis=1) #c(bottom, left, top, right)
+acf(m2_residual, lag.max = 60, main = "Figure.10: The sample ACF of \n the residuals")
+pacf(m2_residual, lag.max = 60, main = "Figure.11: The sample PACF of \n the residuals")
+
+```
+
+
+
+## Transformations
+
+Before dealing with the behaviour of the series, at first we have to deal with the trend of the series followed by the changing variance .
+
+
+### Log Tranformation
+
+The p-value = 0.99 with is greater than 0.05 implies that there is no statistical evidence to reject the null hypothesis. Hence, the log transformed series is still non-stationary.
+
+```{r, warning=F}
+lambda = 0 
+retail.log = log(retail.ts)
+plot(log(retail.ts), type="l",main="Figure.12: Time series plot of log Retail Sales \n for recreational goods")
+order=ar(diff(retail.log))$order
+adfTest(retail.log, lags = order)
+```
+
+
+### Box-Cox Transformation
+
+The Box-cox transformed series still shows some incremented trend and the ACF and PACF shows some non-stationarity in the series with some changing variance. Hence, we need to perform the ADF test to confirm if the BOX-COX transformed series is stationary.
+
+```{r, message=FALSE, comment='', warning=FALSE}
+p=BoxCox.ar(retail.ts)
+```
+
+
+Lambda is found to be 0.35
+```{r}
+lambda=0
+lambda <- (as.numeric(p$ci[1]) + as.numeric(p$ci[2])) / 2
+lambda
+retail.ts.BC = ((retail.ts^lambda)-1)/lambda
+```
+
+
+
+```{r,echo=F}
+plot(retail.ts.BC, ylab='Retail Price',
+     xlab='Year',
+     type='l',
+     col = c("#003366"),
+     lwd=2,
+     main = "Figure.13: Time Series Plot of \n Transformed  Retail Sales of Recreational Goods")
+```
+
+```{r,echo=F}
+par(mar=c(5,4,4.5,1),mfrow=c(1,2), cex.main=1, cex.lab=1, cex.axis=1) #c(bottom, left, top, right)
+acf(retail.log, main = "Figure.14: ACF plot for \n tranformed Retail Sales")
+pacf(retail.log, main = "Figure.15: PACF plot for \n transformed Retail Sales")
+```
+
+
+```{r, warning=FALSE}
+order=ar(diff(retail.ts.BC))$order
+adfTest(retail.ts.BC, lags = order)
+```
+
+The p-value = 0.99 with is greater than 0.05 implies that there is no statistical evidence to reject the null hypothesis. Hence, the series is non-stationary. But at this point, we will keep the Box-Cox transformation since it still helps with stabilizing the variance.
+
+
+## Differencing
+
+In order to de-trend the series, the differencing is required.
+
+### * Applying First Differencing
+
+From ACF and PACF below we consider {SARIMA(2,1,3)x(1,1,1)_12} as one of the candidate model.
+
+
+```{r, message=FALSE, warning=FALSE}
+diff.retail = arima(retail.ts.BC,order=c(0,1,0),seasonal=list(order=c(1,1,1), period=12))
+m4_retail = residuals(diff.retail) 
+
+```
+
+```{r,echo=F}
+par(mfrow=c(1,1))
+plot(m4_retail,xlab='Year',ylab='Residuals',main="Figure.16: Time series plot of the residuals")
+abline(h=0, lty=2, lwd=2, col=2)
+par(mar=c(5,4,4.5,1),mfrow=c(1,2), cex.main=1, cex.lab=1, cex.axis=1) 
+acf(m4_retail, main = "Figure.17: The sample ACF of \n the residuals")
+pacf(m4_retail, main = "Figure.18: The sample PACF of \n the residuals")
+```
+
+
+
+## EACF
+
+From the EACF, the models that we selected are:
+
+* {SARIMA(0,1,3)X(1,1,1)_12}
+* {SARIMA(1,1,2)X(1,1,1)_12}
+* {SARIMA(1,1,3)X(1,1,1)_12}
+* {SARIMA(2,1,3)X(1,1,1)_12}
+* {SARIMA(2,1,4)X(1,1,1)_12}
+* {SARIMA(3,1,4)X(1,1,1)_12}
+
+```{r,echo = F}
+eacf(m4_retail)
+```
+
+
+```{r,warning=F}
+res = armasubsets(y=m4_retail,nar=10,nma=10,y.name='test',ar.method='ols')
+plot(res)
+title('Figure.20: BIC table for recreational goods sales ',line=5)
+```
+
+* From BIC table set of probable models are:
+{SARIMA(1,1,0)X(1,1,1)_12}, {SARIMA(0,1,10)X(1,1,1)_12}
+
+* We consider only ARIMA(1,1,0) but not ARIMA(0,1,10) because it is a large model and violates principle of parsimony
+
+* Final set of candidate model: {SARIMA(0,1,3)X(1,1,1)_12}, {SARIMA(1,1,0)X(1,1,1)_12}, {SARIMA(1,1,2)X(1,1,1)_12}, {SARIMA(1,1,3)X(1,1,1)_12}, {SARIMA(2,1,3)X(1,1,1)_12}, {SARIMA(2,1,4)X(1,1,1)_12}, {SARIMA(3,1,4)X(1,1,1)_12}
+
+<br/><br/>
+
+# Model Fitting
+
+## Parameter Estimation
+
+We use Maximum likelihood estimate (ML) for parameter estimation.
+
+<br/><br/>
+
+### {SARIMA(0,1,3)X(1,1,1)_12} 
+
+The residuals of {SARIMA(0,1,3)X(1,1,1)_12} are white noise.
+
+```{r,echo = F}
+retail_013 = arima(retail.ts.BC,order=c(0,1,3),seasonal=list(order=c(1,1,1), period=12), method = "ML")
+coeftest(retail_013)
+res_013 = residuals(retail_013);  
+```
+
+```{r,echo=F}
+par(mfrow=c(1,1))
+plot(res_013,xlab='Time',ylab='Residuals',main="Figure.21: Time series plot of the residuals of \n {SARIMA(0,1,3)X(1,1,1)_12}")
+par(mfrow=c(1,2))
+acf(res_013, lag.max = 60, main = "Figure.22: The sample ACF of \n the residuals")
+pacf(res_013, lag.max = 60, main = "Figure.23: The sample PACF of \n the residuals")
+
+```
+
+
+### {SARIMA(1,1,0)X(1,1,1)_12} 
+
+In spite of P-value < 0.05 and {SARIMA(1,1,0)X(1,1,1)_12} found to be significant, the residuals are not white noise.
+
+```{r,echo = F}
+retail_110 = arima(retail.ts.BC,order=c(1,1,0),seasonal=list(order=c(1,1,1), period=12), method = "ML")
+coeftest(retail_110)
+res_110 = residuals(retail_110);  
+```
+
+
+```{r,echo=F}
+par(mfrow=c(1,1))
+plot(res_110,xlab='Time',ylab='Residuals',main="Figure.21: Time series plot of the residuals of \n {SARIMA(1,1,0)X(1,1,1)_12}")
+par(mfrow=c(1,2))
+acf(res_110, lag.max = 60, main = "Figure.22: The sample ACF of \n the residuals")
+pacf(res_110, lag.max = 60, main = "Figure.23: The sample PACF of \n the residuals")
+
+```
+
+
+
+### {SARIMA(1,1,2)X(1,1,1)_12}
+
+The residuals are white noise
+
+```{r,echo = F}
+retail_112 = arima(retail.ts.BC,order=c(1,1,2),seasonal=list(order=c(1,1,1), period=12), method = "ML")
+coeftest(retail_112)
+res_112 = residuals(retail_112);  
+```
+
+```{r,echo=F}
+par(mfrow=c(1,1))
+plot(res_112,xlab='Time',ylab='Residuals',main="Figure.24: Time series plot of the residuals of \n {SARIMA(1,1,2)X(1,1,1)_12}")
+par(mar=c(5,4,4.5,1),mfrow=c(1,2), cex.main=1, cex.lab=1, cex.axis=1)
+acf(res_112, lag.max = 60, main = "Figure.25: The sample ACF of \n the residuals")
+pacf(res_112, lag.max = 60, main = "Figure.26: The sample PACF of \n the residuals")
+```
+
+
+
+### {SARIMA(1,1,3)X(1,1,1)_12}
+
+The residuals are white noise
+```{r,echo = F}
+retail_113 = arima(retail.ts.BC,order=c(1,1,3),seasonal=list(order=c(1,1,1), period=12), method = "ML")
+coeftest(retail_113)
+res_113 = residuals(retail_113);  
+```
+
+```{r,echo=F}
+par(mfrow=c(1,1))
+plot(res_113,xlab='Time',ylab='Residuals',main="Figure.27: Time series plot of the residuals of \n {SARIMA(1,1,3)X(1,1,1)_12}")
+par(mfrow=c(1,2))
+acf(res_113, lag.max = 60, main = "Figure.28: The sample ACF of \n the residuals")
+pacf(res_113, lag.max = 60, main = "Figure.29: The sample PACF of \n the residuals")
+```
+
+### {SARIMA(2,1,3)X(1,1,1)_12}
+
+The residuals are not white noise
+
+```{r,echo = F}
+retail_213 = arima(retail.ts.BC,order=c(2,1,3),seasonal=list(order=c(1,1,1), period=12), method = "ML")
+coeftest(retail_213)
+res_213 = residuals(retail_213); 
+```
+
+```{r,echo=F}
+par(mfrow=c(1,1))
+plot(res_213,xlab='Time',ylab='Residuals',main="Figure.30: Time series plot of the residuals of \n {SARIMA(2,1,3)X(1,1,1)_12}")
+par(mfrow=c(1,2))
+acf(res_213, lag.max = 60, main = "Figure.31: The sample ACF of \n the residuals")
+pacf(res_213, lag.max = 60, main = "Figure.32: The sample PACF of \n the residuals")
+
+```
+
+
+### {SARIMA(2,1,4)X(1,1,1)_12}
+
+The residuals are not white noise.
+
+```{r,echo = F}
+retail_214 = arima(retail.ts.BC,order=c(2,1,4),seasonal=list(order=c(1,1,1), period=12), method = "ML")
+coeftest(retail_214)
+res_214 = residuals(retail_214); 
+```
+
+```{r,echo=F}
+par(mfrow=c(1,1))
+plot(res_214,xlab='Time',ylab='Residuals',main="Figure.33: Time series plot of the residuals of \n {SARIMA(2,1,4)X(1,1,1)_12}")
+par(mfrow=c(1,2))
+acf(res_214, lag.max = 60, main = "Figure.34: The sample ACF of \n the residuals")
+pacf(res_214, lag.max = 60, main = "Figure.35: The sample PACF of \n the residuals")
+
+```
+
+### {SARIMA(3,1,4)X(1,1,1)_12}
+
+The residuals are not white noise
+```{r,echo = F}
+retail_314 = arima(retail.ts.BC,order=c(3,1,4),seasonal=list(order=c(1,1,1), period=12), method = "ML")
+coeftest(retail_314)
+res_314 = residuals(retail_314);  
+```
+
+```{r,echo=F}
+par(mfrow=c(1,1))
+plot(res_314,xlab='Time',ylab='Residuals',main="Figure.36: Time series plot of the residuals of \n {SARIMA(3,1,4)X(1,1,1)_12}")
+par(mfrow=c(1,2))
+acf(res_314, lag.max = 60, main = "Figure.37: The sample ACF of \n the residuals")
+pacf(res_314, lag.max = 60, main = "Figure.38: The sample PACF of \n the residuals")
+```
+
+
+We have 2 candidate models with the residuals being white noise:
+* {SARIMA(0,1,3)X(1,1,1)_12}
+* {SARIMA(1,1,2)X(1,1,1)_12}
+* {SARIMA(1,1,3)X(1,1,1)_12}
+
+
+
+## AIC & BIC Score:
+
+We will compare AIC and BIC score for the candidate models. The model with the least scores will be selected as the most competative model.
+
+```{r,echo = F}
+sort.score(AIC(retail_013,retail_112,retail_113),score ="aic")
+sort.score(BIC(retail_013,retail_112,retail_113),score ="bic")
+```
+
+Since AIC and BIC score of {SARIMA(1,1,2)X(1,1,1)_12} model are both the least, {SARIMA(1,1,2)X(1,1,1)_12} is the best selected model for forecasting.
+
+
+## Check Overfitting
+
+{SARIMA(2,1,2)}X(1,1,1)_12} and {SARIMA(1,1,3)}X(1,1,1)_12} are considered to be checked for overfitting {SARIMA(1,1,2)X(1,1,1)_12}. For {SARIMA(1,1,3)}X(1,1,1)_12} we we have performed the analysis above before.
+
+### {SARIMA(2,1,2)}X(1,1,1)_12}
+
+The coefficients in the specified model and in overfitted
+model are very different. We calculate AIC and BIC to compare the results.
+
+```{r,echo = F}
+retail_212 = arima(retail.ts.BC,order=c(2,1,2),seasonal=list(order=c(1,1,1), period=12), method = "ML")
+coeftest(retail_212)
+res_212 = residuals(retail_212);  
+```
+
+```{r,echo=F}
+par(mfrow=c(1,1))
+plot(res_212,xlab='Time',ylab='Residuals',main="Figure.39: Time series plot of the residuals")
+par(mfrow=c(1,2))
+acf(res_212, lag.max = 60, main = "Figure.40: The sample ACF of \n the residuals")
+pacf(res_212, lag.max = 60, main = "Figure.41: The sample PACF of \n the residuals")
+```
+
+```{r,echo = F}
+sort.score(AIC(retail_112,retail_113,retail_212),score ="aic")
+sort.score(BIC(retail_112,retail_113,retail_212),score ="bic")
+```
+
+{SARIMA(1,1,2)}X(1,1,1)_12} is considered to be the best fit with the lowest AIC and BIC score.
+
+
+<br/><br/>
+
+# Model Diagnostics
+
+## Residuals Analysis
+
+$SARIMA(1,1,2)X(1,1,1)_{12}$ is proven to be normal so we can proceed with the forecasting
+
+```{r,warning=F}
+residual.analysis(model = retail_112) #Normal
+```
+
+* Residual plots: The scattering on the Time series plot of standardised residuals seems to show it is randomly distributed over time.
+* There are no longer any changing variance and no trend that are present in the data. Hence, this support the the model $SARIMA(1,1,2)X(1,1,1)_{12}$.
+* Histogram: The histogram for the stardarized residuals looks normally distributed.
+* ACF and PACF: ACF plot shows that it has no significant lags to begin with.
+* Ljung-Box Test: The points shown are all above the alpha which suggests that the null-hyperpothesis is not rejected and the data are independently distributed. The argument SquaredQ = FALSE, to test for regular autocorrelations.
+
+<br/><br/>
+
+ 
+# Forecasting
+
+$SARIMA(1,1,2)X(1,1,1)_{12}$ is selected for forecasting 10 units ahead.
+
+The prediction of the next 10 units is shown in Figure 42. Clearly, it reflects on the seasonality.
+We notice that the forecast’s limits become bigger as long as the prediction is made for longer durations. That is because the uncertainty level in the forecast will increase due to the seasonality, the ordinal, and autocorrelation characteristics. In Figure 42, we can see that the next 10 units of sales of recreational goods will fluctuate in the blue region (80% confidence interval) and the grey region (95% confidence interval).
+
+```{r,warning=F}
+prediction = Arima(retail.ts.BC,order=c(1,1,2),seasonal=list(order=c(1,1,1), period=12))
+preds1 = forecast(prediction, h = 10)
+plot(preds1,
+     ylab='Sales', 
+     xlab='Years', main ="Figure.42: Forecast with model {SARIMA(1,1,2)X(1,1,1)_12}")
+```
+
+
+
+<br/><br/>
+
+<br/><br/>
+
+
+# Summary
+Firstly, the recreational goods sales series is not normal and nonstationary. As a result, we applied Box-Cox transformation to improve the stability of variance. Also, after the first seasonal and ordinary differencing, it turns out to be stationary. 
+
+In model specification, we have listed a set of the candidate models which is {SARIMA(0,1,3)X(1,1,1)_12}, {SARIMA(1,1,0)X(1,1,1)_12}, {SARIMA(1,1,2)X(1,1,1)_12}, {SARIMA(1,1,3)X(1,1,1)_12}, {SARIMA(2,1,3)X(1,1,1)_12}, {SARIMA(2,1,4)X(1,1,1)_12}, {SARIMA(3,1,4)X(1,1,1)_12}
+
+After the model fitting, we found the most competative model is {SARIMA(1,1,2)X(1,1,1)_12} model. Through model diagnostics, it can be proved that {SARIMA(1,1,2)X(1,1,1)_12} is a reliable and promising model to predict.
+
+In the end, the prediction of sales of recreational goods for the next 10 units of time was performed with Box-Cox transformed {SARIMA(1,1,2)X(1,1,1)_12} model in Figure.42.
+
+<br/><br/>
+
+# Reference
+* Credit from:
+https://new.censusatschool.org.nz/resource/time-series-data-sets-2012/
+* The datasets were downloaded from Infoshare: http://www.stats.govt.nz/infoshare/Default.aspx on 6 December 2012, and formatted for importing into iNZight.
+
+<br/><br/>
+
+
+
+\newpage
+
+# Appendix
+
+## Packages
+
+The necessary packages has been installed and load below. The required codes and funtions for the projects are as follows;
+
+```{r getlabels, echo = FALSE}
+
+labs = knitr::all_labels()
+
+labs = labs[!labs %in% c("setup", "toc", "getlabels", "allcode")]
+
+```
+
+```{r allcode, ref.label = labs, echo = T,  eval = FALSE}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
