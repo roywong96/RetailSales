@@ -21,9 +21,9 @@ Analysis conducted through a Model-Building Strategy to find the best fitting mo
 
 Using the EACF, we selected a few models as listed below:
 
-- $SARIMA(0,1,3)X(1,1,1)_12$
-- SARIMA(1,1,2)X(1,1,1)_12
-- SARIMA(1,1,3)X(1,1,1)_12
-- SARIMA(2,1,3)X(1,1,1)_12
-- SARIMA(2,1,4)X(1,1,1)_12
-- SARIMA(3,1,4)X(1,1,1)_12
+- SARIMA(0,1,3)X(1,1,1)<sub>12</sub>
+- SARIMA(1,1,2)X(1,1,1)<sub>12</sub>
+- SARIMA(1,1,3)X(1,1,1)<sub>12</sub>
+- SARIMA(2,1,3)X(1,1,1)<sub>12</sub>
+- SARIMA(2,1,4)X(1,1,1)<sub>12</sub>
+- SARIMA(3,1,4)X(1,1,1)<sub>12</sub>
