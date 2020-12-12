@@ -1,5 +1,7 @@
 # RetailSales
-Retail Sales for Recreational Goods
+Retail Sales for Recreational Goods.
+Credit from: https://new.censusatschool.org.nz/resource/time-series-data-sets-2012/
+The datasets were downloaded from Infoshare: http://www.stats.govt.nz/infoshare/Default.aspx on 6 December 2012, and formatted for importing into iNZight.
 
 
 # Introduction
@@ -19,11 +21,13 @@ Analysis conducted through a Model-Building Strategy to find the best fitting mo
 
 # Model Fitting
 
-Using the EACF, we selected a few models as listed below:
+Using the EACF a the BIC table, we selected a few models as listed below:
 
 - SARIMA(0,1,3)X(1,1,1)<sub>12</sub>
+- SARIMA(1,1,0)X(1,1,1)<sub>12</sub>
 - SARIMA(1,1,2)X(1,1,1)<sub>12</sub>
 - SARIMA(1,1,3)X(1,1,1)<sub>12</sub>
 - SARIMA(2,1,3)X(1,1,1)<sub>12</sub>
 - SARIMA(2,1,4)X(1,1,1)<sub>12</sub>
 - SARIMA(3,1,4)X(1,1,1)<sub>12</sub>
+
