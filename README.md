@@ -8,6 +8,7 @@ The datasets were downloaded from Infoshare: http://www.stats.govt.nz/infoshare/
 
 Analysis conducted through a Model-Building Strategy to find the best fitting model for the data of monthly retail sales in millions of dollars for recreational goods in New Zealand from 1995 to 2010. After this, the forecast for monthly retail sales for recreational goods in New Zealand for the next 10 units of time will be given at the end of the report.
 
+![]()
 
 
 # Model Specification
@@ -41,6 +42,8 @@ Using the EACF a the BIC table, we selected a few models as listed below:
 # Forecasting
 
 The prediction of the next 10 units is shown. Clearly, it reflects on the seasonality. We notice that the forecast’s limits become bigger as long as the prediction is made for longer durations. That is because the uncertainty level in the forecast will increase due to the seasonality, the ordinal, and autocorrelation characteristics. In Figure 42, we can see that the next 10 units of sales of recreational goods will fluctuate in the blue region (80% confidence interval) and the grey region (95% confidence interval).
+
+![](https://github.com/roywong96/RetailSales/blob/main/TSA/TSA_forecast.png)
 
 # Conclusion
 
