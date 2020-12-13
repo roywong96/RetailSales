@@ -8,7 +8,7 @@ The datasets were downloaded from Infoshare: http://www.stats.govt.nz/infoshare/
 
 Analysis conducted through a Model-Building Strategy to find the best fitting model for the data of monthly retail sales in millions of dollars for recreational goods in New Zealand from 1995 to 2010. After this, the forecast for monthly retail sales for recreational goods in New Zealand for the next 10 units of time will be given at the end of the report.
 
-![]()
+![](https://github.com/roywong96/RetailSales/blob/main/TSA/TSA_main.png)
 
 
 # Model Specification
@@ -19,6 +19,7 @@ Analysis conducted through a Model-Building Strategy to find the best fitting mo
 - Using the BOX-COX transformation, the we can see that the series is then stationary as confirmed thought the ADF test.
 - Finally, to de-trend the series, the differencing is performed.
 
+![](https://github.com/roywong96/RetailSales/blob/main/TSA/PCA1.png)
 
 # Model Fitting
 
@@ -32,12 +33,14 @@ Using the EACF a the BIC table, we selected a few models as listed below:
 - SARIMA(2,1,4)X(1,1,1)<sub>12</sub>
 - SARIMA(3,1,4)X(1,1,1)<sub>12</sub>
 
+![](https://github.com/roywong96/RetailSales/blob/main/TSA/BIC%20.png)
 
 # Model Diagnostics
 
 - We carry out the Residual Analysis to determine whether the model selected is suitable for forcasting
 - SARIMA(1,1,2)X(1,1,1)<sub>12</sub> is proven to be normal so we can proceed with the forecasting.
 
+![](https://github.com/roywong96/RetailSales/blob/main/TSA/Diagnostic_Check.png)
 
 # Forecasting
 
