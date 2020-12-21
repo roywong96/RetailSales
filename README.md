@@ -2,6 +2,7 @@
 Retail Sales for Recreational Goods.
 Credit from: https://new.censusatschool.org.nz/resource/time-series-data-sets-2012/
 The datasets were downloaded from Infoshare: http://www.stats.govt.nz/infoshare/Default.aspx on 6 December 2012, and formatted for importing into iNZight.
+[Web Report hosted in RPub](https://rpubs.com/roywong96/633767)
 
 
 # Introduction
