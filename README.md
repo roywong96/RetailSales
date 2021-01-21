@@ -1,7 +1,7 @@
 # RetailSales
 Retail Sales for Recreational Goods.<br/>
 Here are some of the resources used in the project:<br/>
-**Credits:** [Time-Series-Datasets](https://new.censusatschool.org.nz/resource/time-series-data-sets-2012/)<br/>
+**Credits:** [Time-Series-Datasets](https://new.censusatschool.org.nz/resource/time-series-data-sets-2012/) from Census At School.<br/>
 **Datasets:** http://www.stats.govt.nz/infoshare/Default.aspx on 6 December 2012, and formatted for importing into iNZight.<br/>
 **Full Web Report:** [Web Report hosted in RPub](https://rpubs.com/roywong96/633767)
 
