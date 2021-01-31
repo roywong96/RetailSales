@@ -27,13 +27,13 @@ Analysis conducted through a Model-Building Strategy to find the best fitting mo
 
 Using the EACF a the BIC table, we selected a few models as listed below:
 
-- SARIMA(0,1,3)X(1,1,1)<sub>12</sub>
-- SARIMA(1,1,0)X(1,1,1)<sub>12</sub>
-- SARIMA(1,1,2)X(1,1,1)<sub>12</sub>
-- SARIMA(1,1,3)X(1,1,1)<sub>12</sub>
-- SARIMA(2,1,3)X(1,1,1)<sub>12</sub>
-- SARIMA(2,1,4)X(1,1,1)<sub>12</sub>
-- SARIMA(3,1,4)X(1,1,1)<sub>12</sub>
+- SARIMA<sub>(0,1,3)X(1,1,1)<sub>12</sub></sub>
+- SARIMA<sub>(1,1,0)X(1,1,1)<sub>12</sub></sub>
+- SARIMA<sub>(1,1,2)X(1,1,1)<sub>12</sub></sub>
+- SARIMA<sub>(1,1,3)X(1,1,1)<sub>12</sub></sub>
+- SARIMA<sub>(2,1,3)X(1,1,1)<sub>12</sub></sub>
+- SARIMA<sub>(2,1,4)X(1,1,1)<sub>12</sub></sub>
+- SARIMA<sub>(3,1,4)X(1,1,1)<sub>12</sub></sub>
 
 ![](https://github.com/roywong96/RetailSales/blob/main/TSA/BIC%20.png)
 
