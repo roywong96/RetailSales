@@ -54,7 +54,7 @@ Using the EACF a the BIC table, we selected a few models as listed below:
 ![](https://github.com/roywong96/RetailSales/blob/main/TSA/BIC_overfit.png)
 
 
-- SARIMA<sub>(1,1,2)X(1,1,1)<sub>12</sub></sub>
+- SARIMA<sub>(1,1,2)X(1,1,1)<sub>12</sub></sub> is considered to be the best fit with the lowest AIC and BIC score.
 
 
 # Forecasting
