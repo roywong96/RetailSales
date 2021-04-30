@@ -50,8 +50,8 @@ Using the EACF a the BIC table, we selected a few models as listed below:
 - SARIMA<sub>(2,1,2)X(1,1,1)<sub>12</sub></sub> and SARIMA<sub>(1,1,3)X(1,1,1)<sub>12</sub></sub> are consider and checked for overfitting SARIMA<sub>(1,1,2)X(1,1,1)<sub>12</sub></sub>.
 - The coefficients in the specified model and in overfitted model are very different. We calculate AIC and BIC to compare the results.
 
-![](https://github.com/roywong96/RetailSales/blob/main/TSA/TSA_forecast.png)
-![](https://github.com/roywong96/RetailSales/blob/main/TSA/TSA_forecast.png)
+![](https://github.com/roywong96/RetailSales/blob/main/TSA/AIC_overfit.png)
+![](https://github.com/roywong96/RetailSales/blob/main/TSA/BIC_overfit.png)
 
 
 - SARIMA<sub>(1,1,2)X(1,1,1)<sub>12</sub></sub>
